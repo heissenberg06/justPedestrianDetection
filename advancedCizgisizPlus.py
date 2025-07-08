@@ -19,10 +19,10 @@ else:
 model = YOLO("yolov8x.pt").to(device)
 
 # 🔢 Her kaç karede bir YOLO çalıştırılsın?
-SKIP_FRAMES = 7
+SKIP_FRAMES = 2
 
 # Yön tespiti için gerekli parametreler
-MIN_TRACK_LENGTH = 15      # Yön tespiti için minimum takip uzunluğu
+MIN_TRACK_LENGTH = 10     # Yön tespiti için minimum takip uzunluğu
 DIRECTION_THRESHOLD = 15   # Yön kararı için minimum piksel hareketi
 CONSISTENCY_FRAMES = 5     # Tutarlı yön için gereken frame sayısı
 
@@ -36,7 +36,7 @@ VERTICAL_MOVEMENT_RATIO = 0.05  # Daha düşük dikey hareket eşiği
 PEDESTRIAN_AREA_RATIO = 0.7  # Yayaların genellikle bulunduğu alan (alt %70)
 
 # Video dosyası (kodla aynı klasörde)
-VIDEO_PATH = "part_14_cropped.mp4"
+VIDEO_PATH = "part_11.mp4"
 
 # Yeni sayım setleri oluştur
 counted_ids_A = set()  # Kameraya gelenler (A yönü)
@@ -190,24 +190,15 @@ def is_person_on_vehicle(person_box, vehicle_boxes, track_id, frame):
 
 
 def is_pedestrian(track_id, current_position, frame_height):
-    """Yaya tespiti - Sürücüler için daha hassas filtre"""
+    """Yaya tespiti - Sadece hız ve hareket analizine dayalı"""
     if track_id not in track_history or len(track_history[track_id]['positions']) < 8:
         return True
         
     positions = list(track_history[track_id]['positions'])
-    avg_y = np.mean([pos[1] for pos in positions])
-    
-    # Yeni eklenen: Perspektif ağırlıklı yükseklik kontrolü
-    perspective_weight = 0.5 + 0.5*(avg_y/frame_height)
-    height_threshold = frame_height * (1 - PEDESTRIAN_AREA_RATIO * perspective_weight)
     
     # 1. Aşırı hız kontrolü (daha toleranslı)
     speed = calculate_speed(positions)
     if speed > SPEED_THRESHOLD * 1.5:  # %50 daha toleranslı
-        return False
-    
-    # 2. Frame'in üst kısmında olanlar (perspektif ağırlıklı)
-    if avg_y < height_threshold:
         return False
         
     return True
